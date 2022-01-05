@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+</head>
+<body v-scope>
+
+<div class="container py-3">
+  <input type="text" :value="store.query" @input="store.setQuery(event.target.value)" class="form-control" />
+
+  <div v-effect="onQueryChanged(store.query)">
+
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+      <div class="col" v-for="(item, n) in store.list" v-scope="ListItem({ item })">
+        <div class="card">
+          <img :src="previewImage" class="card-img-top" alt="...">
+          <div class="card-body">
+            <h5 class="card-title">{{item.data[0].title}}</h5>
+            <p class="card-text">
+              {{item.data[0].description}}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+  import { createApp, reactive } from 'https://unpkg.com/petite-vue?module'
+
+  const store = reactive({
+    query: '',
+    list: [],
+    setList(list) {
+      this.list = list;
+    },
+    setQuery(val) {
+      this.query = val;
+    }
+  });
+
+  function ListItem({ item }) {
+    return {
+      item,
+
+      get previewImage() {
+        const link = item.links.find(link => link.rel === 'preview');
+        return link && link.href;
+      }
+    };
+  }
+
+  const loadData = debounce(async () => {
+    if (!store.query) {
+      store.setList([]);
+      return;
+    }
+    const res = await fetch(`https://images-api.nasa.gov/search?q=${store.query}`);
+    const { collection } = await res.json();
+
+    store.setList(collection.items);
+  }, 300);
+
+  createApp({
+    store,
+    ListItem,
+
+    async onQueryChanged(val) {
+      loadData();
+    }
+  }).mount();
+
+  function debounce(f, ms) {
+    let isCooldown = false;
+
+    return function() {
+      if (isCooldown) return;
+      f.apply(this, arguments);
+      isCooldown = true;
+      setTimeout(() => isCooldown = false, ms);
+    };
+  }
+</script>
+</body>
+</html>
